@@ -1,0 +1,26 @@
+services:
+  rabbitmq:
+    image: "rabbitmq:management"
+    ports:
+      - "5672:5672"  # Management interface
+      - "15672:15672"
+
+  worker:
+    build: ./worker
+    deploy:
+      replicas: 1
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - rabbitmq
+
+  api:
+    build: ./api
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
