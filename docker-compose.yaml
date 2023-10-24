@@ -2,8 +2,13 @@ services:
   rabbitmq:
     image: "rabbitmq:management"
     ports:
-      - "5672:5672"  # Management interface
-      - "15672:15672"
+      - "5672:5672"
+      - "15672:15672" # Management interface
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   worker:
     build: ./worker
@@ -13,7 +18,8 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   api:
     build: ./api
@@ -23,4 +29,5 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
