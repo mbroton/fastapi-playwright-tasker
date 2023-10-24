@@ -1,7 +1,13 @@
 import logging
+
 import pika
+from playwright.sync_api import sync_playwright
 
 from config import settings
+from processing import process
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def main() -> int:
@@ -14,12 +20,13 @@ def main() -> int:
     channel.queue_declare(queue=settings.RABBITMQ_QUEUE_NAME, durable=True)
 
     def callback(ch, method, properties, body):
-        name = body.decode()
         job_id = properties.message_id
-
-        # Acknowledge receipt of task
+        logging.info("Starting processing job with id %s", job_id)
+        with sync_playwright() as playwright:
+            with playwright.chromium.launch(headless=True) as browser:
+                process(body, browser=browser, job_id=job_id)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        logging.info(f"Processing job {job_id} for {name}...")
+        logging.info("Finished processing job with id %s", job_id)
 
     logging.info("Waiting for messages...")
     channel.basic_consume(
